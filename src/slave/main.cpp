@@ -25,7 +25,7 @@ void setup()
   Serial.begin(9600);
 
   randomSeed(analogRead(A1));
-  twiInitJitter = random(100000);
+  twiInitJitter = random(100, 1000);
   Wire.onReceive(receiveEvent);
 }
 
@@ -50,7 +50,7 @@ void receiveEvent(int howMany)
   if (cmd == ARP_GET_UDID)
   {
     randomSeed(analogRead(A1)); // Re-seed for randomness
-    scheduler.executeDelayed(sendUDID, random(10, 100));
+    scheduler.executeDelayed(sendUDID, random(20, 200));
   }
   else if (cmd == ARP_ASSIGN_ADDR && howMany >= 2)
   {
@@ -73,7 +73,7 @@ void sendUDID()
 void assignNewAddress()
 {
   Wire.end();
-  Wire.begin(deviceAddress);
+  Wire.begin(deviceAddress); // Re-initialize with new address
   Serial.print("Assigned new address: ");
   Serial.println(deviceAddress, HEX);
 }

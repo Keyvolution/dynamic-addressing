@@ -6,7 +6,7 @@ const uint8_t DEFAULT_ADDRESS = 0x61;
 const uint8_t ARP_GET_UDID    = 0x01;
 const uint8_t ARP_ASSIGN_ADDR = 0x02;
 const uint8_t BASE_NEW_ADDR   = 0x02;
-const uint8_t MAX_RETRIES     = 0x02;
+const uint8_t MAX_RETRIES     = 0x03;
 
 uint8_t nextAddress = BASE_NEW_ADDR;
 
@@ -28,54 +28,37 @@ bool discoverAndAssignOneDevice()
   uint8_t receivedUDID[16];
   bool validResponse = false;
 
-  // Send the ARP query command to the broadcast address
-  Wire.beginTransmission(0);
-  Wire.write(ARP_GET_UDID);
-  byte error = Wire.endTransmission();
-
-  if (error != 0)
+  for (uint8_t attempt = 0; attempt < MAX_RETRIES; attempt++)
   {
-    return false; // No device responded
-  }
+    // Send the ARP query command to the broadcast address
+    Wire.beginTransmission(0);
+    Wire.write(ARP_GET_UDID);
+    byte error = Wire.endTransmission();
 
-  // Request 16 bytes of UDID data
-  int bytesReceived = Wire.requestFrom(DEFAULT_ADDRESS, 16);
-  if (bytesReceived == 16)
-  {
-    // Read UDID into receivedUDID array
-    for (int i = 0; i < 16; i++)
-    {
-      if (Wire.available())
-      {
-        receivedUDID[i] = Wire.read();
-      }
-    }
-    validResponse = true;
-  }
-
-  if (!validResponse)
-  {
-    // Retry mechanism in case of collision or invalid response
-    for (int i = 0; i < MAX_RETRIES; i++)
+    if (error != 0) // If no response from any slave
     {
       delay(20); // Wait before retrying
-      Wire.beginTransmission(DEFAULT_ADDRESS);
-      Wire.write(ARP_GET_UDID);
-      if (Wire.endTransmission() != 0)
-        return false; // Retry if no response
+      continue;
+    }
 
-      if (Wire.requestFrom(DEFAULT_ADDRESS, 16) == 16)
+    // Request 16 bytes of UDID data
+    int bytesReceived = Wire.requestFrom(DEFAULT_ADDRESS, 16);
+    if (bytesReceived == 16)
+    {
+      // Read UDID into receivedUDID array
+      for (int i = 0; i < 16; i++)
       {
-        for (int j = 0; j < 16; j++)
+        if (Wire.available())
         {
-          if (Wire.available())
-          {
-            receivedUDID[j] = Wire.read();
-          }
+          receivedUDID[i] = Wire.read();
         }
-        validResponse = true;
-        break;
       }
+      validResponse = true;
+      break; // Device found, break retry loop
+    }
+    else
+    {
+      delay(20); // Retry on invalid response
     }
   }
 
@@ -89,7 +72,7 @@ bool discoverAndAssignOneDevice()
     }
     Serial.println();
 
-    // Send the assign address command with the new address
+    // Send the address assignment to the slave
     Wire.beginTransmission(DEFAULT_ADDRESS);
     Wire.write(ARP_ASSIGN_ADDR);
     Wire.write(nextAddress);
@@ -100,13 +83,11 @@ bool discoverAndAssignOneDevice()
     }
     Serial.print("Assigned address: ");
     Serial.println(nextAddress, HEX);
-    nextAddress++;
+    nextAddress++; // Increment address for next device
     return true;
   }
 
-  return false; // No valid response means no device to assign
+  return false; // No valid response means no device found
 }
 
-void loop()
-{
-}
+void loop() {}
