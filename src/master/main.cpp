@@ -10,19 +10,6 @@ const uint8_t MAX_RETRIES     = 0x03;
 
 uint8_t nextAddress = BASE_NEW_ADDR;
 
-void setup()
-{
-  Serial.begin(9600);
-  Wire.begin();
-
-  while (discoverAndAssignOneDevice())
-  {
-    delay(50); // Short delay between assignments
-  }
-
-  Serial.println("ARP complete: all devices assigned.");
-}
-
 bool discoverAndAssignOneDevice()
 {
   uint8_t receivedUDID[16];
@@ -88,6 +75,19 @@ bool discoverAndAssignOneDevice()
   }
 
   return false; // No valid response means no device found
+}
+
+void setup()
+{
+  Serial.begin(9600);
+  Wire.begin();
+
+  while (discoverAndAssignOneDevice())
+  {
+    delay(50); // Short delay between assignments
+  }
+
+  Serial.println("ARP complete: all devices assigned.");
 }
 
 void loop() {}
