@@ -1,16 +1,24 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include "Bit.h"
+#include "TaskScheduler.h"
 
-const uint8_t SLAVE_ADDRESS = 42;
-const uint8_t LED_PIN = LED_BUILTIN;
+const uint8_t DEFAULT_ADDRESS = 0x61;
+const uint8_t ARP_GET_UDID    = 0x01;
+const uint8_t ARP_ASSIGN_ADDR = 0x02;
+
+const uint8_t UDID[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 uint8_t ledVal = 0;
 uint16_t twiInitJitter;
 bool twiInitialized = false;
-unsigned long previousTime = 0;
+unsigned long previousTwiInitTime = 0;
+
+uint8_t deviceAddress = DEFAULT_ADDRESS;
+TaskScheduler scheduler;
 
 void receiveEvent(int howMany);
+void assignNewAddress();
+void sendUDID();
 
 void setup()
 {
@@ -18,35 +26,36 @@ void setup()
 
   randomSeed(analogRead(A1));
   twiInitJitter = random(100000);
-
   Wire.onReceive(receiveEvent);
-  pinMode(LED_PIN, OUTPUT);
 }
 
 void loop()
 {
-  if (micros() - previousTime >= twiInitJitter && !twiInitialized)
+  // Initialize TWI after random delay
+  if (micros() - previousTwiInitTime >= twiInitJitter && !twiInitialized)
   {
-    Wire.begin(SLAVE_ADDRESS);
-
-    // Enable broadcast reception
-    TWAR = (SLAVE_ADDRESS << 1) | 1;
-
+    Wire.begin(deviceAddress);
+    TWAR = (deviceAddress << 1) | 1; // Enable broadcast reception
     twiInitialized = true;
-    previousTime = micros();
+    previousTwiInitTime = micros();
   }
+
+  // Process the task queue
+  scheduler.process();
 }
 
 void receiveEvent(int howMany)
 {
-  // Expecting 2 bytes; verify and process
-  if (howMany == 2)
+  uint8_t cmd = Wire.read();
+  if (cmd == ARP_GET_UDID)
   {
-    uint16_t value = receiveBytes<uint16_t>();
-    Serial.print("Received value: ");
-    Serial.println(value);
-
-    digitalWrite(LED_PIN, ledVal ^= 1); // Toggle LED for visual confirmation
+    randomSeed(analogRead(A1)); // Re-seed for randomness
+    scheduler.executeDelayed(sendUDID, random(10, 100));
+  }
+  else if (cmd == ARP_ASSIGN_ADDR && howMany >= 2)
+  {
+    deviceAddress = Wire.read();
+    scheduler.executeDelayed(assignNewAddress, 50);
   }
 
   // Flush any extra data
@@ -54,4 +63,17 @@ void receiveEvent(int howMany)
   {
     Wire.read();
   }
+}
+
+void sendUDID()
+{
+  Wire.write(UDID, sizeof(UDID));
+}
+
+void assignNewAddress()
+{
+  Wire.end();
+  Wire.begin(deviceAddress);
+  Serial.print("Assigned new address: ");
+  Serial.println(deviceAddress, HEX);
 }
