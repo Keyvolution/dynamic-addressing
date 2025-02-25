@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include "Bit.h"
 
 void setup()
 {
@@ -9,15 +10,14 @@ void setup()
 
 void loop()
 {
-  uint16_t value = 1234; // e.g., 0x04 0xD2
+  uint16_t value = 1234;
 
   Serial.print("Sending value: ");
   Serial.println(value);
 
   // Broadcast message to all devices
   Wire.beginTransmission(0);
-  Wire.write(highByte(value));
-  Wire.write(lowByte(value));
+  sendBytes(value);
   uint8_t err = Wire.endTransmission();
 
   if (err != 0)

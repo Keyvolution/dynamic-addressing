@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include "Bit.h"
 
 const uint8_t SLAVE_ADDRESS = 42;
 const uint8_t LED_PIN = LED_BUILTIN;
@@ -41,7 +42,7 @@ void receiveEvent(int howMany)
   // Expecting 2 bytes; verify and process
   if (howMany == 2)
   {
-    uint16_t value = Wire.read() << 8 | Wire.read();
+    uint16_t value = receiveBytes<uint16_t>();
     Serial.print("Received value: ");
     Serial.println(value);
 
