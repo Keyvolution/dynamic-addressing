@@ -9,7 +9,7 @@ void setup()
 
 void loop()
 {
-  unsigned int value = 1234; // e.g., 0x04 0xD2
+  uint16_t value = 1234; // e.g., 0x04 0xD2
 
   Serial.print("Sending value: ");
   Serial.println(value);

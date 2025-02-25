@@ -5,9 +5,9 @@ const uint8_t SLAVE_ADDRESS = 42;
 const uint8_t LED_PIN = LED_BUILTIN;
 
 uint8_t ledVal = 0;
-unsigned long previousTime = 0;
 uint16_t twiInitJitter;
 bool twiInitialized = false;
+unsigned long previousTime = 0;
 
 void receiveEvent(int howMany);
 
@@ -41,7 +41,7 @@ void receiveEvent(int howMany)
   // Expecting 2 bytes; verify and process
   if (howMany == 2)
   {
-    int value = Wire.read() << 8 | Wire.read();
+    uint16_t value = Wire.read() << 8 | Wire.read();
     Serial.print("Received value: ");
     Serial.println(value);
 
